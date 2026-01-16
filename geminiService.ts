@@ -4,6 +4,7 @@ import { UserResponses, RoadmapData } from "./types";
 /**
  * Local Fallback Database
  * High-substance blueprints for different focus areas.
+ * Used when no API Key is provided or when the API is unreachable.
  */
 const BLUEPRINTS: Record<string, RoadmapData> = {
   "Content & marketing": {
@@ -64,7 +65,6 @@ const BLUEPRINTS: Record<string, RoadmapData> = {
   }
 };
 
-// Generic fallback for any unmapped focus areas
 const DEFAULT_BLUEPRINT: RoadmapData = BLUEPRINTS["Business operations"];
 
 /**
@@ -72,11 +72,13 @@ const DEFAULT_BLUEPRINT: RoadmapData = BLUEPRINTS["Business operations"];
  * Decides whether to use Gemini (if key exists) or the local Engine.
  */
 export async function generateRoadmap(responses: UserResponses): Promise<RoadmapData> {
+  // Read API_KEY from environment. JSON.stringify in vite.config.ts might result in "undefined" string.
   const apiKey = process.env.API_KEY;
+  const isKeyValid = apiKey && apiKey !== "undefined" && apiKey !== "null" && apiKey !== "";
   
-  // IF NO API KEY IS FOUND, USE THE LOCAL ENGINE
-  if (!apiKey || apiKey === "undefined" || apiKey === "" || apiKey === "null") {
-    console.log("Using Local Blueprint Engine (No API Key detected)");
+  // IF NO VALID API KEY IS FOUND, USE THE LOCAL ENGINE
+  if (!isKeyValid) {
+    console.log("Using Local Blueprint Engine (No valid API Key detected)");
     return generateLocalRoadmap(responses);
   }
 
@@ -135,6 +137,7 @@ function generateLocalRoadmap(responses: UserResponses): Promise<RoadmapData> {
   const selected = BLUEPRINTS[responses.focusArea] || DEFAULT_BLUEPRINT;
   
   return new Promise<RoadmapData>((resolve) => {
+    // Artificial delay to mimic the experience of "Generating"
     setTimeout(() => resolve(selected), 2000);
   });
 }
