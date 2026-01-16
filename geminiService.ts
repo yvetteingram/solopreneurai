@@ -1,4 +1,3 @@
-
 import { GoogleGenAI, Type } from "@google/genai";
 import { UserResponses, RoadmapData } from "./types";
 
@@ -65,6 +64,9 @@ const BLUEPRINTS: Record<string, RoadmapData> = {
   }
 };
 
+// Generic fallback for any unmapped focus areas
+const DEFAULT_BLUEPRINT: RoadmapData = BLUEPRINTS["Business operations"];
+
 /**
  * Main service entry point. 
  * Decides whether to use Gemini (if key exists) or the local Engine.
@@ -73,7 +75,7 @@ export async function generateRoadmap(responses: UserResponses): Promise<Roadmap
   const apiKey = process.env.API_KEY;
   
   // IF NO API KEY IS FOUND, USE THE LOCAL ENGINE
-  if (!apiKey || apiKey === "undefined") {
+  if (!apiKey || apiKey === "undefined" || apiKey === "" || apiKey === "null") {
     console.log("Using Local Blueprint Engine (No API Key detected)");
     return generateLocalRoadmap(responses);
   }
@@ -81,25 +83,18 @@ export async function generateRoadmap(responses: UserResponses): Promise<Roadmap
   const ai = new GoogleGenAI({ apiKey });
 
   const prompt = `
-    You are a Senior AI Strategist.
-    Generate a high-substance, two-tier "AI Starting Roadmap" for:
+    You are a Senior AI Strategist. Generate a high-substance, two-tier "AI Starting Roadmap" for:
     - User Type: ${responses.userType}
     - Strategic Focus: ${responses.focusArea}
     - AI Experience: ${responses.aiLevel}
     - Priority: ${responses.priority}
 
-    STRICT CONSTRAINTS:
-    - NO product names, NO prices, NO links.
-    - NO motivational language.
-    - Neutral, business-focused tone.
-    - NEVER use words: launch, journey, win, momentum.
-
-    OUTPUT JSON with keys: situation, focus, ignore, oneStep, next30Days (week1-4), nextStep.
-    Each section needs a 'preview' (short/list) and 'comprehensive' (detailed/tactical) part.
+    STRICT CONSTRAINTS: NO products, NO prices, NO links. NO motivational fluff. 
+    OUTPUT JSON with keys: situation, focus, ignore, oneStep, next30Days, nextStep.
+    Each section needs a 'preview' (list) and 'comprehensive' (detailed) part.
   `;
 
   try {
-    // Use gemini-3-pro-preview for complex reasoning tasks like business strategy generation.
     const response = await ai.models.generateContent({
       model: "gemini-3-pro-preview",
       contents: prompt,
@@ -108,56 +103,17 @@ export async function generateRoadmap(responses: UserResponses): Promise<Roadmap
         responseSchema: {
           type: Type.OBJECT,
           properties: {
-            situation: { 
-              type: Type.OBJECT, 
-              properties: { 
-                preview: { type: Type.ARRAY, items: { type: Type.STRING } },
-                comprehensive: { type: Type.ARRAY, items: { type: Type.STRING } }
-              },
-              required: ["preview", "comprehensive"]
-            },
-            focus: { 
-              type: Type.OBJECT, 
-              properties: { 
-                preview: { type: Type.ARRAY, items: { type: Type.STRING } },
-                comprehensive: { type: Type.ARRAY, items: { type: Type.STRING } }
-              },
-              required: ["preview", "comprehensive"]
-            },
-            ignore: { 
-              type: Type.OBJECT, 
-              properties: { 
-                preview: { type: Type.ARRAY, items: { type: Type.STRING } },
-                comprehensive: { type: Type.ARRAY, items: { type: Type.STRING } }
-              },
-              required: ["preview", "comprehensive"]
-            },
-            oneStep: { 
-              type: Type.OBJECT, 
-              properties: { 
-                preview: { type: Type.STRING },
-                comprehensive: { type: Type.STRING }
-              },
-              required: ["preview", "comprehensive"]
-            },
-            next30Days: {
-              type: Type.OBJECT,
-              properties: {
-                week1: { type: Type.OBJECT, properties: { preview: { type: Type.STRING }, comprehensive: { type: Type.STRING } }, required: ["preview", "comprehensive"] },
-                week2: { type: Type.OBJECT, properties: { preview: { type: Type.STRING }, comprehensive: { type: Type.STRING } }, required: ["preview", "comprehensive"] },
-                week3: { type: Type.OBJECT, properties: { preview: { type: Type.STRING }, comprehensive: { type: Type.STRING } }, required: ["preview", "comprehensive"] },
-                week4: { type: Type.OBJECT, properties: { preview: { type: Type.STRING }, comprehensive: { type: Type.STRING } }, required: ["preview", "comprehensive"] }
-              },
-              required: ["week1", "week2", "week3", "week4"]
-            },
-            nextStep: { 
-              type: Type.OBJECT, 
-              properties: { 
-                preview: { type: Type.STRING },
-                comprehensive: { type: Type.STRING }
-              },
-              required: ["preview", "comprehensive"]
-            }
+            situation: { type: Type.OBJECT, properties: { preview: { type: Type.ARRAY, items: { type: Type.STRING } }, comprehensive: { type: Type.ARRAY, items: { type: Type.STRING } } }, required: ["preview", "comprehensive"] },
+            focus: { type: Type.OBJECT, properties: { preview: { type: Type.ARRAY, items: { type: Type.STRING } }, comprehensive: { type: Type.ARRAY, items: { type: Type.STRING } } }, required: ["preview", "comprehensive"] },
+            ignore: { type: Type.OBJECT, properties: { preview: { type: Type.ARRAY, items: { type: Type.STRING } }, comprehensive: { type: Type.ARRAY, items: { type: Type.STRING } } }, required: ["preview", "comprehensive"] },
+            oneStep: { type: Type.OBJECT, properties: { preview: { type: Type.STRING }, comprehensive: { type: Type.STRING } }, required: ["preview", "comprehensive"] },
+            next30Days: { type: Type.OBJECT, properties: { 
+              week1: { type: Type.OBJECT, properties: { preview: { type: Type.STRING }, comprehensive: { type: Type.STRING } }, required: ["preview", "comprehensive"] },
+              week2: { type: Type.OBJECT, properties: { preview: { type: Type.STRING }, comprehensive: { type: Type.STRING } }, required: ["preview", "comprehensive"] },
+              week3: { type: Type.OBJECT, properties: { preview: { type: Type.STRING }, comprehensive: { type: Type.STRING } }, required: ["preview", "comprehensive"] },
+              week4: { type: Type.OBJECT, properties: { preview: { type: Type.STRING }, comprehensive: { type: Type.STRING } }, required: ["preview", "comprehensive"] }
+            }, required: ["week1", "week2", "week3", "week4"] },
+            nextStep: { type: Type.OBJECT, properties: { preview: { type: Type.STRING }, comprehensive: { type: Type.STRING } }, required: ["preview", "comprehensive"] }
           },
           required: ["situation", "focus", "ignore", "oneStep", "next30Days", "nextStep"]
         }
@@ -173,13 +129,11 @@ export async function generateRoadmap(responses: UserResponses): Promise<Roadmap
 
 /**
  * Logic to select the best local blueprint if Gemini is unavailable.
- * Returns a Promise to simulate generation delay.
+ * Returns a Promise to simulate generation delay for UX consistency.
  */
 function generateLocalRoadmap(responses: UserResponses): Promise<RoadmapData> {
-  // Select blueprint based on focus area, default to first one if not found
-  const selected = BLUEPRINTS[responses.focusArea] || BLUEPRINTS["Content & marketing"];
+  const selected = BLUEPRINTS[responses.focusArea] || DEFAULT_BLUEPRINT;
   
-  // Small delay to simulate "Generation" feel in UI
   return new Promise<RoadmapData>((resolve) => {
     setTimeout(() => resolve(selected), 2000);
   });
