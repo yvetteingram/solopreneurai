@@ -62,6 +62,62 @@ const BLUEPRINTS: Record<string, RoadmapData> = {
       preview: "Conduct a 5-day time audit.",
       comprehensive: "Before adding tools, you must know exactly where the time is going. Start the audit on your next working day."
     }
+  },
+  "Learning AI basics": {
+    situation: {
+      preview: ["Overwhelmed by AI hype and terminology", "Unsure where to start with limited time", "Concerned about wasting money on wrong tools"],
+      comprehensive: ["The AI landscape feels chaotic with new tools launching daily.", "You're spending more time reading about AI than actually using it.", "There's a disconnect between theoretical knowledge and practical application.", "Decision paralysis is preventing you from making any meaningful progress."]
+    },
+    focus: {
+      preview: ["Master one foundational tool first", "Build practical muscle memory", "Create a personal AI toolkit"],
+      comprehensive: ["Single Tool Mastery: Start with ChatGPT or Claude and become genuinely proficient before exploring alternatives.", "Practical Application: Focus on solving one real problem in your business rather than theoretical exercises.", "Personal Toolkit: Document your go-to prompts and workflows in a simple reference guide you'll actually use."]
+    },
+    ignore: {
+      preview: ["Advanced technical courses", "Every new AI tool announcement", "Complex automation setups"],
+      comprehensive: ["Technical Courses: You don't need to understand neural networks to use AI effectively in your business.", "Tool Chasing: New tools are marketing noise. Master the fundamentals first.", "Complex Automation: Start with simple, manual AI-assisted workflows before attempting sophisticated integrations."]
+    },
+    oneStep: {
+      preview: "Solve one real problem with AI today.",
+      comprehensive: "Pick the most annoying recurring task you did this week. Open ChatGPT or Claude and ask it to help you solve or automate it. Don't read about AI—use it to solve something real right now."
+    },
+    next30Days: {
+      week1: { preview: "Foundation Building", comprehensive: "Choose your primary AI tool (ChatGPT or Claude). Spend 30 minutes daily solving actual business problems with it. Document what works." },
+      week2: { preview: "Pattern Recognition", comprehensive: "Identify 3-5 recurring tasks where AI consistently saves you time. Create simple prompt templates for each." },
+      week3: { preview: "Skill Deepening", comprehensive: "Learn one advanced technique (like few-shot prompting or chain-of-thought reasoning) and apply it to your established workflows." },
+      week4: { preview: "System Creation", comprehensive: "Compile your best prompts and workflows into a personal 'AI Playbook' you can reference and refine over time." }
+    },
+    nextStep: {
+      preview: "Pick your primary AI tool and solve one problem.",
+      comprehensive: "Don't delay. Open ChatGPT or Claude right now and use it to solve a real task you need to complete today."
+    }
+  },
+  "Clarifying what to build": {
+    situation: {
+      preview: ["Multiple ideas competing for attention", "Unclear on market validation", "Analysis paralysis preventing action"],
+      comprehensive: ["You have several potential AI-enhanced products or services but no clear winner.", "Market research is consuming time without providing decisive direction.", "You're stuck in planning mode, perfecting ideas rather than testing them.", "The fear of choosing 'wrong' is preventing you from choosing anything."]
+    },
+    focus: {
+      preview: ["Rapid prototype testing", "Customer feedback loops", "Minimum viable validation"],
+      comprehensive: ["Quick Prototyping: Build the simplest version possible to test your core assumption.", "Feedback First: Get your idea in front of 5-10 potential customers before building more.", "Validation Over Perfection: Focus on proving one key hypothesis rather than creating a complete product."]
+    },
+    ignore: {
+      preview: ["Perfect business plans", "Comprehensive market analysis", "Full feature specifications"],
+      comprehensive: ["Extensive Planning: The market will teach you more in one week than planning will in one month.", "Deep Market Analysis: For solopreneurs, talking to 10 real customers beats reading 100 reports.", "Feature Completeness: Build the absolute minimum needed to test if anyone will pay for the core value."]
+    },
+    oneStep: {
+      preview: "Write your one-sentence value proposition.",
+      comprehensive: "Complete this sentence: 'I help [specific person] achieve [specific outcome] using [your AI-enhanced approach].' Share it with 5 people in your target market this week and record their reactions."
+    },
+    next30Days: {
+      week1: { preview: "Hypothesis Formation", comprehensive: "Define the single core problem you're solving and the simplest AI-enhanced solution. Write it down in one paragraph." },
+      week2: { preview: "Minimum Viable Test", comprehensive: "Create the absolute simplest version to test your hypothesis. It should take 1-2 days maximum to build." },
+      week3: { preview: "Customer Conversations", comprehensive: "Show your prototype to 10 people. Ask: 'Would you pay for this?' Document their exact words and objections." },
+      week4: { preview: "Pivot or Proceed", comprehensive: "Analyze feedback. Either commit to building version 1.0 or pivot based on what you learned. Make a decision." }
+    },
+    nextStep: {
+      preview: "Write your value proposition and test it.",
+      comprehensive: "Stop planning. Write your one-sentence value proposition today and share it with 5 potential customers by end of week."
+    }
   }
 };
 
@@ -72,16 +128,18 @@ const DEFAULT_BLUEPRINT: RoadmapData = BLUEPRINTS["Business operations"];
  * Decides whether to use Gemini (if key exists) or the local Engine.
  */
 export async function generateRoadmap(responses: UserResponses): Promise<RoadmapData> {
-  // Read API_KEY from environment. JSON.stringify in vite.config.ts might result in "undefined" string.
-  const apiKey = process.env.API_KEY;
+  // FIXED: Use import.meta.env instead of process.env for Vite
+  // Also check for VITE_ prefix which is required for client-side access
+  const apiKey = import.meta.env.VITE_GEMINI_API_KEY || import.meta.env.VITE_API_KEY;
   const isKeyValid = apiKey && apiKey !== "undefined" && apiKey !== "null" && apiKey !== "";
   
   // IF NO VALID API KEY IS FOUND, USE THE LOCAL ENGINE
   if (!isKeyValid) {
-    console.log("Using Local Blueprint Engine (No valid API Key detected)");
+    console.log("✅ Using Local Blueprint Engine (No API Key needed)");
     return generateLocalRoadmap(responses);
   }
 
+  console.log("🔑 Valid API Key found, attempting to use Gemini API...");
   const ai = new GoogleGenAI({ apiKey });
 
   const prompt = `
@@ -122,9 +180,10 @@ export async function generateRoadmap(responses: UserResponses): Promise<Roadmap
       }
     });
 
+    console.log("✅ Gemini API successful");
     return JSON.parse(response.text || "{}") as RoadmapData;
   } catch (error: any) {
-    console.warn("Gemini API Error, falling back to local engine:", error);
+    console.warn("⚠️ Gemini API Error, falling back to local engine:", error.message);
     return generateLocalRoadmap(responses);
   }
 }
@@ -135,6 +194,8 @@ export async function generateRoadmap(responses: UserResponses): Promise<Roadmap
  */
 function generateLocalRoadmap(responses: UserResponses): Promise<RoadmapData> {
   const selected = BLUEPRINTS[responses.focusArea] || DEFAULT_BLUEPRINT;
+  
+  console.log(`📋 Selected blueprint for: ${responses.focusArea}`);
   
   return new Promise<RoadmapData>((resolve) => {
     // Artificial delay to mimic the experience of "Generating"
