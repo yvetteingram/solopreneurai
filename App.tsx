@@ -16,13 +16,20 @@ const App: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
+<<<<<<< HEAD
       // The service now handles the lack of an API key internally by providing a fallback blueprint.
+=======
+>>>>>>> 46276e883d94140d4dfaf4a0ccb56eb6068a712c
       const data = await generateRoadmap(responses);
       setRoadmap(data);
       setView(AppView.ROADMAP);
     } catch (err: any) {
       console.error("Roadmap generation failed:", err);
       setError(err.message || "An unexpected error occurred while generating your strategy.");
+<<<<<<< HEAD
+=======
+      // We don't reset to questionnaire automatically to avoid the "loop"
+>>>>>>> 46276e883d94140d4dfaf4a0ccb56eb6068a712c
     } finally {
       setLoading(false);
     }
@@ -41,7 +48,13 @@ const App: React.FC = () => {
           <div className="w-16 h-16 bg-red-50 text-red-500 rounded-full flex items-center justify-center text-2xl mx-auto mb-6">⚠️</div>
           <h2 className="text-xl font-bold text-slate-900 mb-2">Strategy Generation Failed</h2>
           <p className="text-sm text-slate-500 mb-8 leading-relaxed">
+<<<<<<< HEAD
             {error}
+=======
+            {error.includes("403") || error.includes("API_KEY") 
+              ? "The API key is missing or invalid. Please ensure the API_KEY environment variable is set in your hosting provider's dashboard."
+              : error}
+>>>>>>> 46276e883d94140d4dfaf4a0ccb56eb6068a712c
           </p>
           <button 
             onClick={reset}
@@ -79,9 +92,15 @@ const App: React.FC = () => {
             <div className="absolute inset-0 border-4 border-slate-100 rounded-full"></div>
             <div className="absolute inset-0 border-4 border-slate-900 border-t-transparent rounded-full animate-spin"></div>
           </div>
+<<<<<<< HEAD
           <h2 className="text-xl font-bold text-slate-900 mb-2">Compiling Strategy</h2>
           <p className="text-sm font-bold text-slate-400 uppercase tracking-[0.2em] animate-pulse">
             Analyzing operational gaps & tactical outlook...
+=======
+          <h2 className="text-xl font-bold text-slate-900 mb-2">Preparing Your Strategy</h2>
+          <p className="text-sm font-bold text-slate-400 uppercase tracking-[0.2em] animate-pulse">
+            Compiling tactical actions & professional outlook...
+>>>>>>> 46276e883d94140d4dfaf4a0ccb56eb6068a712c
           </p>
         </div>
       )}
